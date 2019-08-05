@@ -48,7 +48,8 @@ def bind_model(model_nsml):
         # DONOTCHANGE This Line
         test_meta_data = pd.read_csv(test_meta_data_path, delimiter=',', header=0)
         
-        input_size=128 # you can change this according to your model.
+        #input_size=128 # you can change this according to your model.
+        input_size=224 # for RESNET34
         batch_size=200 # you can change this. But when you use 'nsml submit --test' for test infer, there are only 200 number of data.
         device = 0
         
@@ -86,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--pause', type=int, default=0)
     
     # custom args
-    parser.add_argument('--input_size', type=int, default=128)
+    parser.add_argument('--input_size', type=int, default=224)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
