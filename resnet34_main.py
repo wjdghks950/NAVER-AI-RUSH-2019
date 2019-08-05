@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 import argparse
 import pathlib
-from model import Baseline, Resnet
+from resnet_model import Resnet
 import nsml
 import pandas as pd
 from torchvision import transforms
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     
     # custom args
     parser.add_argument('--input_size', type=int, default=224)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
