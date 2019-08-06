@@ -28,6 +28,11 @@ def timeSince(since):
     s = now - since
     return '%s' % (time_format(s))
 
+def lr_scheduler(args, optimizer, epoch):
+    lr = args.learning_rate * (0.5 ** ( epoch // 30 ))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+######
 def to_np(t):
     return t.cpu().detach().numpy()
 
@@ -92,6 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
+    parser.add_argument('--model_size', type=int, default=101)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
@@ -104,10 +110,9 @@ if __name__ == '__main__':
     start = time.time()
     torch.manual_seed(args.seed)
     device = args.device
-
     if args.resnet:
         assert args.input_size == 224
-        model = Resnet(args.output_size)
+        model = Resnet(args.model_size, args.output_size)
     else:
         model = Baseline(args.hidden_size, args.output_size)
     optimizer = optim.Adam(model.parameters(), args.learning_rate)
@@ -126,6 +131,8 @@ if __name__ == '__main__':
         best_accuracy = 0
         best_checkpoint = 0
         for epoch_idx in range(1, args.epochs + 1):
+            #It's not pretrained model. So start from high lr and adjust it by epoch.
+            lr_scheduler(args, optimizer, epoch_idx)
             total_loss = 0
             total_correct = 0
             for batch_idx, (image, tags) in enumerate(dataloader):
