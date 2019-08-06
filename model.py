@@ -32,7 +32,7 @@ class Baseline(nn.Module):
 class Resnet(nn.Module):
     def __init__(self, out_size):
         super().__init__()
-        model = models.resnet18(pretrained=True)
+        model = models.resnet101(pretrained=True)
         model = list(model.children())[:-1]
         model.append(nn.Conv2d(512, out_size, 1))
         self.net = nn.Sequential(*model)
