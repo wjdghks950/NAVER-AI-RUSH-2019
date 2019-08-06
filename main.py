@@ -90,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
-    parser.add_argument('--resnet', default=True)
+    parser.add_argument('--resnet', default=False)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 best_checkpoint = epoch_idx
 
             print('CHECKPOINT : {}, has Accuracy : {}'.format(str(epoch_idx), accuracy))
-            print('BSET CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
+            print('BEST CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
             nsml.save(epoch_idx)
             print('nsml model saved' + str(epoch_idx))
             print('Time : {}, Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(timeSince(start), epoch_idx,
