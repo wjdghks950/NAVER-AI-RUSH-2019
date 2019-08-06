@@ -164,7 +164,7 @@ if __name__ == '__main__':
                 best_checkpoint = epoch_idx
 
             print('CHECKPOINT : {}, has Accuracy : {}'.format(str(epoch_idx), accuracy))
-            print('BSET CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
+            print('BEST CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
             nsml.save(epoch_idx)
             print('nsml model saved' + str(epoch_idx))
             print('Time : {}, Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(timeSince(start), epoch_idx,
