@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 import argparse
 import pathlib
-from model import Baseline, Resnet
+from resnet_model import Resnet
 import nsml
 import pandas as pd
 from torchvision import transforms
@@ -28,6 +28,11 @@ def timeSince(since):
     s = now - since
     return '%s' % (time_format(s))
 
+def lr_scheduler(args, optimizer, epoch):
+    lr = args.learning_rate * (0.5 ** ( epoch // 30 ))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+######
 def to_np(t):
     return t.cpu().detach().numpy()
 
@@ -48,7 +53,8 @@ def bind_model(model_nsml):
         # DONOTCHANGE This Line
         test_meta_data = pd.read_csv(test_meta_data_path, delimiter=',', header=0)
         
-        input_size=128 # you can change this according to your model.
+        #input_size=128 # you can change this according to your model.
+        input_size=224 # for RESNET34
         batch_size=200 # you can change this. But when you use 'nsml submit --test' for test infer, there are only 200 number of data.
         device = 0
         
@@ -86,11 +92,12 @@ if __name__ == '__main__':
     parser.add_argument('--pause', type=int, default=0)
     
     # custom args
-    parser.add_argument('--input_size', type=int, default=128)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--input_size', type=int, default=224)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
+    parser.add_argument('--model_size', type=int, default=101)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
@@ -103,10 +110,9 @@ if __name__ == '__main__':
     start = time.time()
     torch.manual_seed(args.seed)
     device = args.device
-
     if args.resnet:
         assert args.input_size == 224
-        model = Resnet(args.output_size)
+        model = Resnet(args.model_size, args.output_size)
     else:
         model = Baseline(args.hidden_size, args.output_size)
     optimizer = optim.Adam(model.parameters(), args.learning_rate)
@@ -125,6 +131,8 @@ if __name__ == '__main__':
         best_accuracy = 0
         best_checkpoint = 0
         for epoch_idx in range(1, args.epochs + 1):
+            #It's not pretrained model. So start from high lr and adjust it by epoch.
+            lr_scheduler(args, optimizer, epoch_idx)
             total_loss = 0
             total_correct = 0
             for batch_idx, (image, tags) in enumerate(dataloader):

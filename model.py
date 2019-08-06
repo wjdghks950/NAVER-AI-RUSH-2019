@@ -28,7 +28,6 @@ class Baseline(nn.Module):
     def forward(self, image):
         return self.net(image).squeeze(-1).squeeze(-1)
 
-
 class Resnet(nn.Module):
     def __init__(self, out_size):
         super().__init__()
@@ -39,4 +38,3 @@ class Resnet(nn.Module):
 
     def forward(self, image):
         return self.net(image).squeeze(-1).squeeze(-1)
-
