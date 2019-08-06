@@ -22,7 +22,7 @@ def train_dataloader(input_size=128,
         
     dataloader = DataLoader(
         AIRushDataset(image_dir, train_meta_data, label_path=train_label_path, 
-                      transform=transforms.Compose([transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+                      transform=transforms.Compose([transforms.Resize((input_size, input_size)), transforms.ToTensor()]), preprocess=True),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -31,11 +31,12 @@ def train_dataloader(input_size=128,
 
 
 class AIRushDataset(Dataset):
-    def __init__(self, image_data_path, meta_data, label_path=None, transform=None):
+    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, preprocess=False):
         self.meta_data = meta_data
         self.image_dir = image_data_path
         self.label_path = label_path
         self.transform = transform
+        self.preprocess = preprocess
         
         if self.label_path is not None:
             self.label_matrix = np.load(label_path)
@@ -46,6 +47,7 @@ class AIRushDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.image_dir , str(self.meta_data['package_id'].iloc[idx]) , str(self.meta_data['sticker_id'].iloc[idx]) + '.png')
         png = Image.open(img_name).convert('RGBA')
+        png.show()
         png.load() # required for png.split()
 
         new_img = Image.new("RGB", png.size, (255, 255, 255))
@@ -54,6 +56,16 @@ class AIRushDataset(Dataset):
         if self.transform:
             new_img = self.transform(new_img)
         
+        if self.preprocess: # data augmentation for training dataset
+            self.transform = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ColorJitter(hue=0.05, saturation=0.05),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(20, resample=Image.BILINEAR),
+                transforms.ToTensor()
+            ])
+            new_img = self.transform(new_img)
+
         if self.label_path is not None:
             tags = torch.tensor(np.argmax(self.label_matrix[idx])) # here, we will use only one label among multiple labels.
             return new_img, tags
