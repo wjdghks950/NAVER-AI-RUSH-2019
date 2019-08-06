@@ -53,7 +53,7 @@ class AIRushDataset(Dataset):
         new_img = Image.new("RGB", png.size, (255, 255, 255))
         new_img.paste(png, mask=png.split()[3]) # 3 is the alpha channel
 
-        if self.transform:
+        if self.transform and not self.preprocess:
             new_img = self.transform(new_img)
         
         if self.preprocess: # data augmentation for training dataset
