@@ -76,7 +76,7 @@ def bind_model(model_nsml):
             output_prob = F.softmax(output, dim=1)
             predict = np.argmax(to_np(output_prob), axis=1)
             predict_list.append(predict)
-                
+
         predict_vector = np.concatenate(predict_list, axis=0)
         return predict_vector # this return type should be a numpy array which has shape of (138343, 1)
 
@@ -123,10 +123,9 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
-    #normalize = transforms.Normarlize(mean=[0.8674, 0.8422, 0.8217],
-    #                                std=[0.2285, 0.2483, 0.2682])
-    if args.mode == 'test':
-        print('TEST strat')
+    # model = model.to(device)
+    # model.train()
+
     # DONOTCHANGE: They are reserved for nsml
     bind_model(model)
     if args.pause:
@@ -136,6 +135,7 @@ if __name__ == '__main__':
         model.train()
         # Warning: Do not load data before this line
         dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
+        print('Dataloader length: ', len(dataloader.dataset))
         best_accuracy = 0
         best_checkpoint = 0
         for epoch_idx in range(1, args.epochs + 1):
@@ -143,7 +143,7 @@ if __name__ == '__main__':
             lr_scheduler(args, optimizer, epoch_idx)
             total_loss = 0
             total_correct = 0
-            for batch_idx, (image, tags) in enumerate(dataloader):
+            for batch_idx, (image, tags) in enumerate(dataloader): # Data augmentation happens in this line
                 optimizer.zero_grad()
                 image = image.to(device)
                 tags = tags.to(device)

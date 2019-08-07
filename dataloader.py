@@ -15,7 +15,7 @@ def train_dataloader(input_size=128,
                     num_workers=0,
                     ):
     
-    image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images') 
+    image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     train_label_path = os.path.join(DATASET_PATH, 'train', 'train_label') 
     train_meta_path = os.path.join(DATASET_PATH, 'train', 'train_data', 'train_with_valid_tags.csv')
     train_meta_data = pd.read_csv(train_meta_path, delimiter=',', header=0)
