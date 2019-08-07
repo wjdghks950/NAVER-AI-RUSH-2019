@@ -16,4 +16,9 @@ class Resnet(nn.Module):
         self.net = nn.Sequential(*model)
 
     def forward(self, image):
-        return self.net(image).squeeze(-1).squeeze(-1)
+        x = self.net(image).squeeze(-1).squeeze(-1)
+        noise=True
+        if noise:
+            noise = x.data.new(x.size()).normal_(0, 0.01)
+            x = x + noise
+        return x
