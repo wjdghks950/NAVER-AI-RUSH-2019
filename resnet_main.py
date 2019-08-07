@@ -29,7 +29,7 @@ def timeSince(since):
     return '%s' % (time_format(s))
 
 def lr_scheduler(args, optimizer, epoch):
-    lr = args.learning_rate * (0.5 ** ( epoch // 30 ))
+    lr = args.learning_rate * (0.5 ** ( epoch // 20 ))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 ######
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--log_interval', type=int, default=400)
-    parser.add_argument('--learning_rate', type=float, default=2.5e-4)
+    parser.add_argument('--learning_rate', type=float, default=0.1)
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--seed', type=int, default=44)
     args = parser.parse_args()
@@ -110,12 +110,17 @@ if __name__ == '__main__':
     start = time.time()
     torch.manual_seed(args.seed)
     device = args.device
+    #recommended
+    #from scratch
+    #lr = 0.1
+    #weight decay 1e-4
+    #decrease lr when validation error plateaus...............;;;;;;;;;;;;;;
     if args.resnet:
         assert args.input_size == 224
         model = Resnet(args.model_size, args.output_size)
     else:
         model = Baseline(args.hidden_size, args.output_size)
-    optimizer = optim.Adam(model.parameters(), args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
     #normalize = transforms.Normarlize(mean=[0.8674, 0.8422, 0.8217],
