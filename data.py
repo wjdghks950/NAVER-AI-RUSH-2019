@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 import argparse
 import pathlib
-from resnet_model import Resnet
+from model import Baseline
 import nsml
 import pandas as pd
 from torchvision import transforms
@@ -28,11 +28,6 @@ def timeSince(since):
     s = now - since
     return '%s' % (time_format(s))
 
-def lr_scheduler(args, optimizer, epoch):
-    lr = args.learning_rate * (0.5 ** ( epoch // 30 ))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-######
 def to_np(t):
     return t.cpu().detach().numpy()
 
@@ -53,8 +48,7 @@ def bind_model(model_nsml):
         # DONOTCHANGE This Line
         test_meta_data = pd.read_csv(test_meta_data_path, delimiter=',', header=0)
         
-        #input_size=128 # you can change this according to your model.
-        input_size=224 # for RESNET34
+        input_size=128 # you can change this according to your model.
         batch_size=200 # you can change this. But when you use 'nsml submit --test' for test infer, there are only 200 number of data.
         device = 0
         
@@ -76,7 +70,7 @@ def bind_model(model_nsml):
             output_prob = F.softmax(output, dim=1)
             predict = np.argmax(to_np(output_prob), axis=1)
             predict_list.append(predict)
-
+                
         predict_vector = np.concatenate(predict_list, axis=0)
         return predict_vector # this return type should be a numpy array which has shape of (138343, 1)
 
@@ -92,93 +86,49 @@ if __name__ == '__main__':
     parser.add_argument('--pause', type=int, default=0)
     
     # custom args
-    parser.add_argument('--input_size', type=int, default=224)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--input_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
-    parser.add_argument('--resnet', default=True)
-    parser.add_argument('--model_size', type=int, default=34)
+    parser.add_argument('--resnet', default=False)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--log_interval', type=int, default=400)
+    parser.add_argument('--log_interval', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
     parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=44)
+    parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
     print(args)
     start = time.time()
     torch.manual_seed(args.seed)
-    device = args.device
+    #device = args.device
+
     if args.resnet:
         assert args.input_size == 224
-        model = Resnet(args.model_size, args.output_size)
+        model = Resnet(args.output_size)
     else:
         model = Baseline(args.hidden_size, args.output_size)
     optimizer = optim.Adam(model.parameters(), args.learning_rate)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
-    # model = model.to(device)
-    # model.train()
+    #model = model.to(device)
+    model.train()
 
     # DONOTCHANGE: They are reserved for nsml
     bind_model(model)
     if args.pause:
         nsml.paused(scope=locals())
     if args.mode == "train":
-        model = model.to(device)
-        model.train()
         # Warning: Do not load data before this line
         dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
-        print('Dataloader length: ', len(dataloader.dataset))
-        best_accuracy = 0
-        best_checkpoint = 0
-        for epoch_idx in range(1, args.epochs + 1):
-            #It's not pretrained model. So start from high lr and adjust it by epoch.
-            lr_scheduler(args, optimizer, epoch_idx)
-            total_loss = 0
-            total_correct = 0
-            for batch_idx, (image, tags) in enumerate(dataloader): # Data augmentation happens in this line
-                optimizer.zero_grad()
-                image = image.to(device)
-                tags = tags.to(device)
-                output = model(image).double()
-                loss = criterion(output, tags)
-                loss.backward()
-                optimizer.step()
-
-                output_prob = F.softmax(output, dim=1)
-                predict_vector = np.argmax(to_np(output_prob), axis=1)
-                label_vector = to_np(tags)
-                bool_vector = predict_vector == label_vector
-                accuracy = bool_vector.sum() / len(bool_vector)
-
-                if batch_idx % args.log_interval == 0:
-                    print('Time : {}, Batch {} / {}: Batch Loss {:2.4f} / Batch Acc {:2.4f}'.format(timeSince(start), batch_idx,
-                                                                             len(dataloader),
-                                                                             loss.item(),
-                                                                             accuracy))
-                total_loss += loss.item()
-                total_correct += bool_vector.sum()
-                    
-            accuracy = total_correct/len(dataloader.dataset)
-            if best_accuracy < accuracy:
-                best_accuracy = accuracy
-                best_checkpoint = epoch_idx
-
-            print('CHECKPOINT : {}, has Accuracy : {}'.format(str(epoch_idx), accuracy))
-            print('BEST CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
-            nsml.save(epoch_idx)
-            print('nsml model saved' + str(epoch_idx))
-            print('Time : {}, Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(timeSince(start), epoch_idx,
-                                                           args.epochs,
-                                                           total_loss/len(dataloader.dataset),
-                                                           total_correct/len(dataloader.dataset)))
-            nsml.report(
-                summary=True,
-                step=epoch_idx,
-                scope=locals(),
-                **{
-                "train__Loss": total_loss/len(dataloader.dataset),
-                "train__Accuracy": total_correct/len(dataloader.dataset),
-                })
+        mean = 0.
+        std = 0.
+        for images, _ in dataloader:
+            batch_samples = images.size(0) # batch size (the last batch can have smaller size!)
+            images = images.view(batch_samples, images.size(1), -1)
+            mean += images.mean(2).sum(0)
+            std += images.std(2).sum(0)
+        mean /= len(dataloader.dataset)
+        std /= len(dataloader.dataset)
+        print(mean, std) 
