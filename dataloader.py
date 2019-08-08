@@ -61,8 +61,9 @@ class AIRushDataset(Dataset):
                 transforms.Resize((224, 224)),
                 transforms.ColorJitter(hue=0.05, saturation=0.05),
                 transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(20, resample=Image.BILINEAR),
-                transforms.ToTensor()
+                transforms.RandomRotation(30, resample=Image.BILINEAR),
+                transforms.ToTensor(),
+                transforms.Normalize((0.8, 0.8, 0.8), (0.2, 0.2, 0.2)) # TODO: Right mean and std for the airush1 data?
             ])
             new_img = self.transform(new_img)
 
