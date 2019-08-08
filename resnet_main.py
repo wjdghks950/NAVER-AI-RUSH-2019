@@ -165,7 +165,7 @@ if __name__ == '__main__':
                                                                              accuracy))
                 total_loss += loss.item()
                 total_correct += bool_vector.sum()
-                    
+
             accuracy = total_correct/len(dataloader.dataset)
             if best_accuracy < accuracy:
                 best_accuracy = accuracy
