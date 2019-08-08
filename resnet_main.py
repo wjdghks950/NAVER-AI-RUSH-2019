@@ -62,7 +62,7 @@ def bind_model(model_nsml):
                         AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
                                       transform=transforms.Compose([
                                       transforms.Resize((input_size, input_size)),
-                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682))
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)),
                                       transforms.ToTensor()])),
                         batch_size=batch_size,
                         shuffle=False,
