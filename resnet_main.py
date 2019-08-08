@@ -115,7 +115,7 @@ if __name__ == '__main__':
         model = Resnet(args.model_size, args.output_size)
     else:
         model = Baseline(args.hidden_size, args.output_size)
-    optimizer = optim.Adam(model.parameters(), args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), args.learning_rate, weight_decay=5e-4)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
     # model = model.to(device)
