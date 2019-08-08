@@ -6,7 +6,7 @@ class Resnet(nn.Module):
     def __init__(self, model_size, out_size):
         super().__init__()
         if model_size == 34:
-            model = models.resnet34(pretrained=False)
+            model = models.resnet34(pretrained=True)
             expansion = 1
         elif model_size == 101:
             model = models.resnet101(pretrained=True)

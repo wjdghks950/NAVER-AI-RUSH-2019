@@ -60,7 +60,10 @@ def bind_model(model_nsml):
         
         dataloader = DataLoader(
                         AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
-                                      transform=transforms.Compose([transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+                                      transform=transforms.Compose([
+                                      transforms.Resize((input_size, input_size)),
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)),
+                                      transforms.ToTensor()])),
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=0,
@@ -97,12 +100,12 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
-    parser.add_argument('--model_size', type=int, default=34)
+    parser.add_argument('--model_size', type=int, default=101)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--log_interval', type=int, default=400)
-    parser.add_argument('--learning_rate', type=float, default=0.1)
+    parser.add_argument('--learning_rate', type=float, default=2e-4)
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--seed', type=int, default=44)
     args = parser.parse_args()
@@ -135,7 +138,6 @@ if __name__ == '__main__':
         model.train()
         # Warning: Do not load data before this line
         dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
-        print('Dataloader length: ', len(dataloader.dataset))
         best_accuracy = 0
         best_checkpoint = 0
         for epoch_idx in range(1, args.epochs + 1):

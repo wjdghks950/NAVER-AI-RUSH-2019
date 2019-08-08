@@ -55,7 +55,9 @@ class AIRushDataset(Dataset):
 
         if self.transform and not self.preprocess:
             new_img = self.transform(new_img)
-        
+        #normalization
+        #mean = [0.8674, 0.8422, 0.8217]
+        #std = [0.2285, 0.2483, 0.2682]
         if self.preprocess: # data augmentation for training dataset
             self.transform = transforms.Compose([
                 transforms.Resize((224, 224)),
@@ -63,7 +65,7 @@ class AIRushDataset(Dataset):
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomRotation(30, resample=Image.BILINEAR),
                 transforms.ToTensor(),
-                transforms.Normalize((0.8, 0.8, 0.8), (0.2, 0.2, 0.2)) # TODO: Right mean and std for the airush1 data?
+                transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682))
             ])
             new_img = self.transform(new_img)
 
