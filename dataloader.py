@@ -68,7 +68,6 @@ class AIRushDataset(Dataset):
                 transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682))
             ])
             new_img = self.transform(new_img)
-        print(self.label_matrix[idx])
         if self.label_path is not None:
             tags = torch.tensor(np.argmax(self.label_matrix[idx])) # here, we will use only one label among multiple labels.
             return new_img, tags
