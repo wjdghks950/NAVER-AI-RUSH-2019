@@ -63,13 +63,14 @@ def bind_model(model_nsml):
         model_nsml.to(device)
         model_nsml.eval()
         predict_list = []
-        for batch_idx, image in enumerate(dataloader):
-            image = image.to(device)
-            output = model_nsml(image).double()
-            
-            output_prob = F.softmax(output, dim=1)
-            predict = np.argmax(to_np(output_prob), axis=1)
-            predict_list.append(predict)
+        with torch.no_grad(): # No need for torch.backward() - no gradient calculation
+            for batch_idx, image in enumerate(dataloader):
+                image = image.to(device)
+                output = model_nsml(image).double()
+                
+                output_prob = F.softmax(output, dim=1)
+                predict = np.argmax(to_np(output_prob), axis=1)
+                predict_list.append(predict)
                 
         predict_vector = np.concatenate(predict_list, axis=0)
         return predict_vector # this return type should be a numpy array which has shape of (138343, 1)
