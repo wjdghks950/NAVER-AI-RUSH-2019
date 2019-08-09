@@ -62,8 +62,8 @@ def bind_model(model_nsml):
                         AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
                                       transform=transforms.Compose([
                                       transforms.Resize((input_size, input_size)),
-                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)),
                                       transforms.ToTensor()])),
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)),
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=0,
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
-    parser.add_argument('--model_size', type=int, default=101)
+    parser.add_argument('--model_size', type=int, default=34)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
