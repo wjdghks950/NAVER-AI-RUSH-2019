@@ -157,6 +157,7 @@ if __name__ == '__main__':
             for batch_idx, (image, tags) in enumerate(dataloader): # Data augmentation happens in this line
                 optimizer.zero_grad()
                 image = image.to(device)
+                tags = tags.to(device)
                 output = model(image).double()
                 loss = criterion(output, tags)
                 #total_loss = (0.6 * loss) + (0.3 * loss2) + (0.1 * loss3)
@@ -166,7 +167,7 @@ if __name__ == '__main__':
 
                 output_prob = F.softmax(output, dim=1)
                 predict_vector = np.argmax(to_np(output_prob), axis=1)
-                label_vector = to_np(t1)
+                label_vector = to_np(tags)
                 bool_vector = predict_vector == label_vector
                 accuracy = bool_vector.sum() / len(bool_vector)
 
