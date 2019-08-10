@@ -40,6 +40,12 @@ class AIRushDataset(Dataset):
         
         if self.label_path is not None:
             self.label_matrix = np.load(label_path)
+    def get_tags(self, l):
+        tags = []
+        for index, a in enumerate(l):
+            if a==1.:
+                tags.append(index)
+        return np.array(tags)
 
     def __len__(self):
         return len(self.meta_data)
@@ -70,6 +76,7 @@ class AIRushDataset(Dataset):
             new_img = self.transform(new_img)
         if self.label_path is not None:
             tags = torch.tensor(np.argmax(self.label_matrix[idx])) # here, we will use only one label among multiple labels.
+            #tags = self.get_tags(self.label_matrix[idx])
             return new_img, tags
         else:
             return new_img
