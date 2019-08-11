@@ -102,6 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
+    parser.add_argument('--ensemble', default=False) # Ensemble model flag
     parser.add_argument('--model_size', type=int, default=34)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
@@ -123,6 +124,10 @@ if __name__ == '__main__':
     if args.resnet:
         assert args.input_size == 224
         model = Resnet(args.model_size, args.output_size)
+    elif args.ensemble:
+        model = nsml.load(iteration='22', session='team_44/airush1/97') # resnet34 - pretrain, decay, lr adjust, aug, noise
+        model1 = nsml.load(iteration='22', session='team_44/airush1/161') # resnet34 - pretrain, normalization, decay, ...(rest is the same)
+        model2 = nsml.load(iteration='20', session='team_44/airush1/192') # resnet50 - pretrain, normalization, decay, ...(rest is the same)
     else:
         model = Baseline(args.hidden_size, args.output_size)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
