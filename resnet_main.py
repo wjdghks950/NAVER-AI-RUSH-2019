@@ -125,9 +125,10 @@ if __name__ == '__main__':
         assert args.input_size == 224
         model = Resnet(args.model_size, args.output_size)
     elif args.ensemble:
-        model1 = nsml.load(iteration='22', session='team_44/airush1/97') # resnet34 - pretrain, decay, lr adjust, aug, noise
-        model2 = nsml.load(iteration='22', session='team_44/airush1/161') # resnet34 - pretrain, normalization, decay, ...(rest is the same)
-        model3 = nsml.load(iteration='20', session='team_44/airush1/192') # resnet50 - pretrain, normalization, decay, ...(rest is the same)
+        #nsml.load doesn't return the any model. It returns None.
+        #model1 = nsml.load(checkpoint='22', session='team_44/airush1/97') # resnet34 - pretrain, decay, lr adjust, aug, noise
+        #model2 = nsml.load(checkpoint='22', session='team_44/airush1/161') # resnet34 - pretrain, normalization, decay, ...(rest is the same)
+        #model3 = nsml.load(checkpoint='20', session='team_44/airush1/192') # resnet50 - pretrain, normalization, decay, ...(rest is the same)
         #it occurs syntax error
         #model = ['model1': model1,
         #         'model2': model2,
