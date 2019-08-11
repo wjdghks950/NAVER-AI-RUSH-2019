@@ -63,7 +63,7 @@ def bind_model(model_nsml):
                                       transform=transforms.Compose([
                                       transforms.Resize((input_size, input_size)),
                                       transforms.ToTensor()])),
-                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)),
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)), # Normalize after ToTensor()
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=0,
