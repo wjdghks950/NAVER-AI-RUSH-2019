@@ -62,8 +62,9 @@ def bind_model(model_nsml):
                         AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
                                       transform=transforms.Compose([
                                       transforms.Resize((input_size, input_size)),
-                                      transforms.ToTensor()])),
-                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)), # Normalize after ToTensor()
+                                      transforms.ToTensor(),
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)) # Normalize after ToTensor()
+                                      ])),
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=0,
@@ -135,6 +136,13 @@ if __name__ == '__main__':
     if args.pause:
         nsml.paused(scope=locals())
     if args.mode == "train":
+        #session 161 has error when test... again... sorry ....
+        #so we need load and save the model in another session with modified test code.
+        #such as
+        #nsml.load(checkpoint='22', session='team_44/airush1/161')
+        #nsml.save('saved')
+        #and 'nsml submit team_44/airush1/{new_session} 'saved'
+        #exit()
         model = model.to(device)
         model.train()
         # Warning: Do not load data before this line
@@ -152,6 +160,8 @@ if __name__ == '__main__':
                 tags = tags.to(device)
                 output = model(image).double()
                 loss = criterion(output, tags)
+                #total_loss = (0.6 * loss) + (0.3 * loss2) + (0.1 * loss3)
+                #total_loss.backward()
                 loss.backward()
                 optimizer.step()
 

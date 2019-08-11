@@ -13,7 +13,7 @@ class Resnet(nn.Module):
             expansion = 4
         elif model_size == 50:
             model = models.resnet50(pretrained=True)
-            expansion = 1
+            expansion = 4
         model = list(model.children())[:-1]
         model.append(nn.Conv2d(512 * expansion, out_size, 1))
         self.net = nn.Sequential(*model)
