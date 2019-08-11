@@ -103,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
     parser.add_argument('--ensemble', default=False) # Ensemble model flag
-    parser.add_argument('--model_size', type=int, default=34)
+    parser.add_argument('--model_size', type=int, default=50)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
@@ -128,9 +128,10 @@ if __name__ == '__main__':
         model1 = nsml.load(iteration='22', session='team_44/airush1/97') # resnet34 - pretrain, decay, lr adjust, aug, noise
         model2 = nsml.load(iteration='22', session='team_44/airush1/161') # resnet34 - pretrain, normalization, decay, ...(rest is the same)
         model3 = nsml.load(iteration='20', session='team_44/airush1/192') # resnet50 - pretrain, normalization, decay, ...(rest is the same)
-        model = ['model1': model1,
-                 'model2': model2,
-                 'model3': model3]
+        #it occurs syntax error
+        #model = ['model1': model1,
+        #         'model2': model2,
+        #         'model3': model3]
     else:
         model = Baseline(args.hidden_size, args.output_size)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
