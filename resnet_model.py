@@ -20,8 +20,10 @@ class Resnet(nn.Module):
 
     def forward(self, image):
         x = self.net(image).squeeze(-1).squeeze(-1)
-        noise=True
-        if noise:
-            noise = x.data.new(x.size()).normal_(0, 0.01)
-            x = x + noise
+        #don't inject noise when eval
+        if self.training:
+            noise=True
+            if noise:
+                noise = x.data.new(x.size()).normal_(0, 0.01)
+                x = x + noise
         return x
