@@ -8,6 +8,9 @@ class Resnet(nn.Module):
         if model_size == 34:
             model = models.resnet34(pretrained=True)
             expansion = 1
+        elif model_size == 18:
+            model = models.resnet18(pretrained=True)
+            expansion = 1
         elif model_size == 101:
             model = models.resnet101(pretrained=True)
             expansion = 4
