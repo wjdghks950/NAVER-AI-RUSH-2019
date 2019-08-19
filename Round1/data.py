@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 import argparse
 import pathlib
-from model import Baseline, Resnet
+from model import Baseline
 import nsml
 import pandas as pd
 from torchvision import transforms
@@ -63,14 +63,13 @@ def bind_model(model_nsml):
         model_nsml.to(device)
         model_nsml.eval()
         predict_list = []
-        with torch.no_grad(): # No need for torch.backward() - no gradient calculation
-            for batch_idx, image in enumerate(dataloader):
-                image = image.to(device)
-                output = model_nsml(image).double()
-                
-                output_prob = F.softmax(output, dim=1)
-                predict = np.argmax(to_np(output_prob), axis=1)
-                predict_list.append(predict)
+        for batch_idx, image in enumerate(dataloader):
+            image = image.to(device)
+            output = model_nsml(image).double()
+            
+            output_prob = F.softmax(output, dim=1)
+            predict = np.argmax(to_np(output_prob), axis=1)
+            predict_list.append(predict)
                 
         predict_vector = np.concatenate(predict_list, axis=0)
         return predict_vector # this return type should be a numpy array which has shape of (138343, 1)
@@ -103,7 +102,7 @@ if __name__ == '__main__':
     print(args)
     start = time.time()
     torch.manual_seed(args.seed)
-    device = args.device
+    #device = args.device
 
     if args.resnet:
         assert args.input_size == 224
@@ -113,7 +112,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), args.learning_rate)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
-    model = model.to(device)
+    #model = model.to(device)
     model.train()
 
     # DONOTCHANGE: They are reserved for nsml
@@ -123,52 +122,13 @@ if __name__ == '__main__':
     if args.mode == "train":
         # Warning: Do not load data before this line
         dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
-        best_accuracy = 0
-        best_checkpoint = 0
-        for epoch_idx in range(1, args.epochs + 1):
-            total_loss = 0
-            total_correct = 0
-            for batch_idx, (image, tags) in enumerate(dataloader):
-                optimizer.zero_grad()
-                image = image.to(device)
-                tags = tags.to(device)
-                output = model(image).double()
-                loss = criterion(output, tags)
-                loss.backward()
-                optimizer.step()
-
-                output_prob = F.softmax(output, dim=1)
-                predict_vector = np.argmax(to_np(output_prob), axis=1)
-                label_vector = to_np(tags)
-                bool_vector = predict_vector == label_vector
-                accuracy = bool_vector.sum() / len(bool_vector)
-
-                if batch_idx % args.log_interval == 0:
-                    print('Time : {}, Batch {} / {}: Batch Loss {:2.4f} / Batch Acc {:2.4f}'.format(timeSince(start), batch_idx,
-                                                                             len(dataloader),
-                                                                             loss.item(),
-                                                                             accuracy))
-                total_loss += loss.item()
-                total_correct += bool_vector.sum()
-                    
-            accuracy = total_correct/len(dataloader.dataset)
-            if best_accuracy < accuracy:
-                best_accuracy = accuracy
-                best_checkpoint = epoch_idx
-
-            print('CHECKPOINT : {}, has Accuracy : {}'.format(str(epoch_idx), accuracy))
-            print('BEST CHECKPOINT : {}, has BEST Accuracy : {}'.format(str(best_checkpoint), best_accuracy))
-            nsml.save(epoch_idx)
-            print('nsml model saved' + str(epoch_idx))
-            print('Time : {}, Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(timeSince(start), epoch_idx,
-                                                           args.epochs,
-                                                           total_loss/len(dataloader.dataset),
-                                                           total_correct/len(dataloader.dataset)))
-            nsml.report(
-                summary=True,
-                step=epoch_idx,
-                scope=locals(),
-                **{
-                "train__Loss": total_loss/len(dataloader.dataset),
-                "train__Accuracy": total_correct/len(dataloader.dataset),
-                })
+        mean = 0.
+        std = 0.
+        for images, _ in dataloader:
+            batch_samples = images.size(0) # batch size (the last batch can have smaller size!)
+            images = images.view(batch_samples, images.size(1), -1)
+            mean += images.mean(2).sum(0)
+            std += images.std(2).sum(0)
+        mean /= len(dataloader.dataset)
+        std /= len(dataloader.dataset)
+        print(mean, std) 

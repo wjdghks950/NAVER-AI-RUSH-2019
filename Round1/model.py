@@ -24,8 +24,7 @@ class Baseline(nn.Module):
             nn.BatchNorm2d(hidden_size),
             nn.Conv2d(hidden_size, out_size, 4, 1),
         )
-
-    def forward(self, image):
+    def forward(self, image, p_id):
         return self.net(image).squeeze(-1).squeeze(-1)
 
 class Resnet(nn.Module):

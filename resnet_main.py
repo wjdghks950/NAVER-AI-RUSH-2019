@@ -29,7 +29,7 @@ def timeSince(since):
     return '%s' % (time_format(s))
 
 def lr_scheduler(args, optimizer, epoch):
-    lr = args.learning_rate * (0.5 ** ( epoch // 30 ))
+    lr = args.learning_rate * (0.5 ** ( epoch // 20 ))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 ######
@@ -60,7 +60,11 @@ def bind_model(model_nsml):
         
         dataloader = DataLoader(
                         AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
-                                      transform=transforms.Compose([transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+                                      transform=transforms.Compose([
+                                      transforms.Resize((input_size, input_size)),
+                                      transforms.ToTensor(),
+                                      transforms.Normalize((0.8674, 0.8422, 0.8217), (0.2285, 0.2483, 0.2682)) # Normalize after ToTensor()
+                                      ])),
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=0,
@@ -69,14 +73,15 @@ def bind_model(model_nsml):
         model_nsml.to(device)
         model_nsml.eval()
         predict_list = []
-        for batch_idx, image in enumerate(dataloader):
-            image = image.to(device)
-            output = model_nsml(image).double()
-            
-            output_prob = F.softmax(output, dim=1)
-            predict = np.argmax(to_np(output_prob), axis=1)
-            predict_list.append(predict)
+        with torch.no_grad(): # No need for torch.backward() - no gradient calculation
+            for batch_idx, image in enumerate(dataloader):
+                image = image.to(device)
+                output = model_nsml(image).double()
                 
+                output_prob = F.softmax(output, dim=1)
+                predict = np.argmax(to_np(output_prob), axis=1)
+                predict_list.append(predict)
+
         predict_vector = np.concatenate(predict_list, axis=0)
         return predict_vector # this return type should be a numpy array which has shape of (138343, 1)
 
@@ -93,39 +98,56 @@ if __name__ == '__main__':
     
     # custom args
     parser.add_argument('--input_size', type=int, default=224)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
     parser.add_argument('--resnet', default=True)
-    parser.add_argument('--model_size', type=int, default=101)
+    parser.add_argument('--model_size', type=int, default=50)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--log_interval', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=2.5e-4)
+    parser.add_argument('--log_interval', type=int, default=400)
+    parser.add_argument('--learning_rate', type=float, default=2e-4)
     parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--seed', type=int, default=44)
     args = parser.parse_args()
     print(args)
     start = time.time()
     torch.manual_seed(args.seed)
     device = args.device
+    #recommended
+    #from scratch
+    #lr = 0.1
+    #weight decay 1e-4
+    #decrease lr when validation error plateaus...............;;;;;;;;;;;;;;
     if args.resnet:
         assert args.input_size == 224
         model = Resnet(args.model_size, args.output_size)
+		#model1 = nsml.load(checkpoint='22', session='team_44/airush1/97') # resnet34 - pretrain, decay, lr adjust, aug, noise
+        #model2 = nsml.load(checkpoint='22', session='team_44/airush1/161') # resnet34 - pretrain, normalization, decay, ...(rest is the same)
+        #model3 = nsml.load(checkpoint='20', session='team_44/airush1/192') # resnet50 - pretrain, normalization, decay, ...(rest is the same)
     else:
         model = Baseline(args.hidden_size, args.output_size)
-    optimizer = optim.Adam(model.parameters(), args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss() #multi-class classification task
 
-    model = model.to(device)
-    model.train()
+    # model = model.to(device)
+    # model.train()
 
     # DONOTCHANGE: They are reserved for nsml
     bind_model(model)
     if args.pause:
         nsml.paused(scope=locals())
     if args.mode == "train":
+        #session 161 has error when test... again... sorry ....
+        #so we need load and save the model in another session with modified test code.
+        #such as
+        #nsml.load(checkpoint='22', session='team_44/airush1/161')
+        #nsml.save('saved')
+        #and 'nsml submit team_44/airush1/{new_session} 'saved'
+        #exit()
+        model = model.to(device)
+        model.train()
         # Warning: Do not load data before this line
         dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
         best_accuracy = 0
@@ -135,12 +157,14 @@ if __name__ == '__main__':
             lr_scheduler(args, optimizer, epoch_idx)
             total_loss = 0
             total_correct = 0
-            for batch_idx, (image, tags) in enumerate(dataloader):
+            for batch_idx, (image, tags) in enumerate(dataloader): # Data augmentation happens in this line
                 optimizer.zero_grad()
                 image = image.to(device)
                 tags = tags.to(device)
                 output = model(image).double()
                 loss = criterion(output, tags)
+                #total_loss = (0.6 * loss) + (0.3 * loss2) + (0.1 * loss3)
+                #total_loss.backward()
                 loss.backward()
                 optimizer.step()
 
@@ -157,7 +181,7 @@ if __name__ == '__main__':
                                                                              accuracy))
                 total_loss += loss.item()
                 total_correct += bool_vector.sum()
-                    
+
             accuracy = total_correct/len(dataloader.dataset)
             if best_accuracy < accuracy:
                 best_accuracy = accuracy
