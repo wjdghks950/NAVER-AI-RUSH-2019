@@ -26,7 +26,7 @@ import nsml
 # Refactor to summarize from existing experiment code.
 
 if not nsml.IS_ON_NSML:
-    DATASET_PATH = os.path.join('/home/kwpark_mk2/airush2_temp')
+    DATASET_PATH = os.path.join('/airush2_temp')
     DATASET_NAME = 'airush2_temp'
     print('use local gpu...!')
     use_nsml = False
@@ -35,6 +35,81 @@ else:
     print('start using nsml...!')
     print('DATASET_PATH: ', DATASET_PATH)
     use_nsml = True
+
+class custom_model(nn.Module):
+    def __init__(self, num_classes=1):
+        super(custom_model, self).__init__()
+        self.num_classes = num_classes
+        
+        self.eif_net = nn.Sequential(
+            nn.Linear(2048, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 100),
+        )
+
+        self.ff_net = nn.Sequential(
+            nn.Linear(35, 60),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(60, 10),
+        )
+
+        self.classifier = nn.Linear(110, 1)
+
+    def forward(self, eif, ff):
+        _eif=self.eif_net(eif)
+        _ff=self.ff_net(ff)
+        all_features = torch.cat((_eif, _ff), 1)
+        output = self.classifier(all_features)
+        return output
+class custom_model2(nn.Module):
+    def __init__(self, num_classes=1):
+        super(custom_model2, self).__init__()
+        self.num_classes = num_classes
+        image_model = models.resnet101(pretrained=True)
+        image_model = list(image_model.children())[:-1]
+        image_model.append(nn.Conv2d(2048, 64, 1))
+        self.image_net = nn.Sequential(*image_model)
+        
+        self.eif_net = nn.Sequential(
+            nn.Linear(2048, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 100),
+        )
+
+        self.ff_net = nn.Sequential(
+            nn.Linear(35, 60),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(60, 10),
+        )
+
+        self.classifier = nn.Linear(110, 1)
+
+    def forward(self, image, eif, ff):
+        _img=self.image_net(image).squeeze(-1).squeeze(-1)
+        _eif=self.eif_net(eif)
+        _ff=self.ff_net(ff)
+        _image = torch.cat((_img, _eif), 1)
+        all_features = torch.cat((_eif, _ff), 1)
+        output = self.classifier(all_features)
+
+        return output
+
 
 
 # example model and code
@@ -66,51 +141,12 @@ class MLP_only_flatfeatures(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.constant_(m.bias, 0)
 
-
-# example model and code
-class CTRResNet_CAT(models.ResNet):
-    def __init__(self, block, layers, num_classes=1):
-        super().__init__(block, layers, num_classes=num_classes)
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3)
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
-
-        self.classifier = nn.Sequential(
-            nn.Linear(547, 4096),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(4096, num_classes),
-        )
-
-    def forward(self, x, flat_features):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        x = self.avgpool(x)
-        # concat, hint: how you are going to fuse these features..?
-        x = x.view(x.size(0), -1)
-        x = torch.cat((x, flat_features), 1)
-
-        x = self.classifier(x)
-        return x
-
-
+def get_custom(num_classes):
+    return custom_model(num_classes=num_classes)
+def get_custom2(num_classes):
+    return custom_model2(num_classes=num_classes)
 def get_mlp(num_classes):
     return MLP_only_flatfeatures(num_classes=num_classes)
-
-
-def get_resnet18(num_classes):
-    return CTRResNet_CAT(models.resnet.BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
-
 
 def bind_nsml(model, optimizer, task):
     def save(dir_name, *args, **kwargs):
@@ -160,8 +196,12 @@ def _infer(root, phase, model, task):
 def main(args):
     if args.arch == 'MLP':
         model = get_mlp(num_classes=args.num_classes)
-    elif args.arch == 'Resnet':
-        model = get_resnet18(num_classes=args.num_classes)
+    elif args.arch == 'custom':
+        model = get_custom(num_classes=args.num_classes)
+    elif args.arch == 'custom2':
+        model = get_custom2(num_classes=args.num_classes)
+        #maximum batch_size
+        args.batch_size = 64
 
     if args.use_gpu:
         model = model.cuda()
@@ -192,8 +232,15 @@ def main(args):
         for epoch in range(args.num_epochs):
             for i, data in enumerate(train_loader):
                 images, extracted_image_features, labels, flat_features = data
+                #print(images.size())
+                #B x [3 x 456 x 232] image
+                #print(extracted_image_features.size())
+                #B x 2048 feature_image
+                #print(flat_features.size())
+                #B x 35 
 
-                images = images.cuda()
+                if args.arch == 'custom2':
+                    images = images.cuda()
                 extracted_image_features = extracted_image_features.cuda()
                 flat_features = flat_features.cuda()
                 labels = labels.cuda()
@@ -203,6 +250,10 @@ def main(args):
                     logits = model(extracted_image_features, flat_features)
                 elif args.arch == 'Resnet':
                     logits = model(images, flat_features)
+                elif args.arch == 'custom':
+                    logits = model(extracted_image_features, flat_features)
+                elif args.arch == 'custom2':
+                    logits = model(images, extracted_image_features, flat_features)
                 criterion = nn.MSELoss()
                 loss = torch.sqrt(criterion(logits.squeeze(), labels.float()))
 
@@ -250,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_step_every', type=int, default=1000)
 
     parser.add_argument('--use_gpu', type=bool, default=True)
-    parser.add_argument("--arch", type=str, default="MLP")
+    parser.add_argument("--arch", type=str, default="custom")
 
     # reserved for nsml
     parser.add_argument("--mode", type=str, default="train")
