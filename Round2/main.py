@@ -68,6 +68,7 @@ class custom_model(nn.Module):
         _ff=self.ff_net(ff)
         all_features = torch.cat((_eif, _ff), 1)
         output = self.classifier(all_features)
+        output = torch.sigmoid(output)
         return output
 class custom_model2(nn.Module):
     def __init__(self, num_classes=1):
@@ -106,7 +107,7 @@ class custom_model2(nn.Module):
         _ff=self.ff_net(ff)
         _image = torch.cat((_img, _eif), 1)
         all_features = torch.cat((_image, _ff), 1)
-        output = self.classifier(all_features)
+        output = torch.sigmoid(self.classifier(all_features))
 
         return output
 
@@ -208,7 +209,8 @@ def main(args):
     else:
         model = model.cpu()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
+    if args.arch == 'custom2' or args.arch == 'custom':
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.5)
     if use_nsml:
         bind_nsml(model, optimizer, args.task)
     if args.pause:
@@ -255,6 +257,8 @@ def main(args):
                 elif args.arch == 'custom2':
                     logits = model(images, extracted_image_features, flat_features)
                 criterion = nn.MSELoss()
+                if args.arch == 'custom2' or args.arch == 'custom':
+                    criterion = nn.BCELoss()
                 loss = torch.sqrt(criterion(logits.squeeze(), labels.float()))
 
                 # backward and optimize
