@@ -154,7 +154,7 @@ class AIRUSH2dataset(Dataset):
             label_onehot[time - 1] = 1
             flat_features.extend(label_onehot)
 
-        if self.args['use_read_history']:
+        if self.args['use_read_history']: #TODO: This helps A LOT
             raise NotImplementedError('If you can handle "sequential" data, then.. hint: this helps a lot')
 
         flat_features = np.array(flat_features).flatten()
