@@ -9,9 +9,9 @@ import numpy as np
 import time
 import datetime
 
-from model import custom_model, custom_model2, MLP_only_flatfeatures
 from data_loader import feed_infer
 from evaluation import evaluation_metrics
+from sklearn.metrics import f1_score
 import nsml
 
 # expected to be a difficult problem
@@ -37,10 +37,166 @@ else:
     print('DATASET_PATH: ', DATASET_PATH)
     use_nsml = True
 
+class custom_model(nn.Module):
+    def __init__(self, num_classes=1):
+        super(custom_model, self).__init__()
+        self.num_classes = num_classes
+        
+        self.eif_net = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 512),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(512, 256),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(256, 100),
+        )
+
+        self.ff_net = nn.Sequential(
+            nn.Linear(35, 60),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(60, 10),
+        )
+
+        self.classifier = nn.Linear(110, 1)
+
+    def forward(self, eif, ff):
+        _eif=self.eif_net(eif)
+        _ff=self.ff_net(ff)
+        all_features = torch.cat((_eif, _ff), 1)
+        output = self.classifier(all_features)
+        output = torch.sigmoid(output)
+        return output
+class custom_model2(nn.Module):
+    def __init__(self, num_classes=1):
+        super(custom_model2, self).__init__()
+        self.num_classes = num_classes
+        image_model = models.resnet18(pretrained=True)
+        image_model = list(image_model.children())[:-1]
+        image_model.append(nn.Conv2d(512, 256, 1))
+        self.image_net = nn.Sequential(*image_model)
+        
+        self.eif_net = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 512),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(512, 256),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(256, 100),
+        )
+
+        self.ff_net = nn.Sequential(
+            nn.Linear(35, 60),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(60, 10),
+        )
+
+        self.classifier = nn.Linear(356, 1)
+
+    def forward(self, image, eif, ff):
+        _img=self.image_net(image).squeeze(-1).squeeze(-1)
+        _eif=self.eif_net(eif)
+        _ff=self.ff_net(ff)
+        #_image = torch.cat((_img, _eif), 1)
+        #all_features = torch.cat((_image, _ff), 1)
+        all_features = torch.cat((_img, _eif), 1)
+        output = torch.sigmoid(self.classifier(all_features))
+        #output = self.classifier(all_features)
+        return output
+
+class custom_model3(nn.Module):
+    def __init__(self, num_classes=1):
+        super(custom_model3, self).__init__()
+        self.num_classes = num_classes
+        
+        self.eif_net = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 512),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(512, 256),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(256, 100),
+        )
+
+        self.ff_net = nn.Sequential(
+            nn.Linear(35, 60),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(60, 10),
+        )
+
+        self.history_net = nn.Sequential(
+            nn.Linear(2427, 2048),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(2048, 512),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(512, 256),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(256, 100),
+        )
+
+        self.classifier = nn.Linear(210, 1)
+
+    def forward(self, eif, ff, sequence):
+        _eif=self.eif_net(eif)
+        _ff=self.ff_net(ff)
+        _history = self.history_net(sequence)
+        _features = torch.cat((_eif, _ff), 1)
+        all_features = torch.cat((_features, _history),1)
+        output = self.classifier(all_features)
+        return output
+
+# example model and code
+class MLP_only_flatfeatures(nn.Module):
+    def __init__(self, num_classes=1):
+        super(MLP_only_flatfeatures, self).__init__()
+        self.num_classes = num_classes
+        self.classifier = nn.Sequential(
+            nn.Linear(2083, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, self.num_classes),
+        )
+
+        self._initialize_weights()
+
+    def forward(self, extracted_image_feature, flat_features):
+        x = torch.cat((extracted_image_feature, flat_features), 1)
+        x = self.classifier(x)
+        # x = self.relu(x)
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+
 def get_custom(num_classes):
     return custom_model(num_classes=num_classes)
 def get_custom2(num_classes):
     return custom_model2(num_classes=num_classes)
+def get_custom3(num_classes):
+    return custom_model3(num_classes=num_classes)
 def get_mlp(num_classes):
     return MLP_only_flatfeatures(num_classes=num_classes)
 
@@ -75,19 +231,30 @@ def _infer(root, phase, model, task):
         y_pred = []
         print('start infer')
         for i, data in enumerate(test_loader):
-            images, extracted_image_features, labels, flat_features = data
-
-            # images = images.cuda()
+            images, extracted_image_features, labels, flat_features, sequence, mask = data
+            sequence = sequence.cuda()
+            #images = images.cuda()
             extracted_image_features = extracted_image_features.cuda()
             flat_features = flat_features.cuda()
             # labels = labels.cuda()
 
-            logits = model(extracted_image_features, flat_features)
+            #logits = model(images, extracted_image_features, flat_features)
+            logits = model(extracted_image_features, flat_features, sequence)
             y_pred += logits.cpu().squeeze().numpy().tolist()
 
         print('end infer')
     return y_pred
 
+def weighted_BCE(output, target, weight):
+    assert len(weight) == 2
+    loss = weight[1] * (target * torch.log(output)) + \
+            weight[0] * ((1-target) * torch.log(1-output))
+    return torch.neg(torch.mean(loss))
+def evaluation(y_true, y_pred):
+    y_pred[y_pred>0.5]=1
+    y_pred[y_pred<=0.5]=0
+    score = f1_score(y_true=y_true, y_pred=y_pred, pos_label=1)
+    return score.item()
 
 def main(args):
     if args.arch == 'MLP':
@@ -98,6 +265,11 @@ def main(args):
         model = get_custom2(num_classes=args.num_classes)
         #maximum batch_size
         args.batch_size = 64
+        args.lr = 0.01
+    elif args.arch == 'custom3':
+        model = get_custom3(num_classes=args.num_classes)
+        args.batch_size = 2048
+        args.lr = 0.01
 
     if args.use_gpu:
         model = model.cuda()
@@ -125,10 +297,11 @@ def main(args):
             args.num_epochs = 1
         else:
             print('start training...!')
+            nsml.save('init')
 
         for epoch in range(args.num_epochs):
             for i, data in enumerate(train_loader):
-                images, extracted_image_features, labels, flat_features = data
+                images, extracted_image_features, labels, flat_features, sequence, mask = data
                 #print(images.size())
                 #B x [3 x 456 x 232] image
                 #print(extracted_image_features.size())
@@ -138,6 +311,8 @@ def main(args):
 
                 if args.arch == 'custom2':
                     images = images.cuda()
+                if args.arch == 'custom3':
+                    sequence = sequence.cuda()
                 extracted_image_features = extracted_image_features.cuda()
                 flat_features = flat_features.cuda()
                 labels = labels.cuda()
@@ -151,18 +326,27 @@ def main(args):
                     logits = model(extracted_image_features, flat_features)
                 elif args.arch == 'custom2':
                     logits = model(images, extracted_image_features, flat_features)
+                elif args.arch == 'custom3':
+                    logits = model(extracted_image_features, flat_features, sequence)
                 criterion = nn.MSELoss()
-                if args.arch == 'custom2' or args.arch == 'custom':
-                    criterion = nn.BCELoss()
-                loss = torch.sqrt(criterion(logits.squeeze(), labels.float()))
+                if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
+                    weight = torch.tensor([0.06382, 1.])
+                    weight = weight.cuda()
+                    loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
 
                 # backward and optimize
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
+                y_pred = logits.cpu().squeeze().detach().numpy()
+                y_true = labels.cpu().squeeze().detach().numpy()
+                score = evaluation(y_true, y_pred)
+                print('train set f1 score is : ', score)
                 if loss < best_loss:
                     nsml.save('best_loss')  # this will save your best model on nsml.
+                    if i % 500 == 0:
+                        nsml.save(str(i)+'batch_best_loss')
 
                 if i % args.print_every == 0:
                     elapsed = datetime.datetime.now() - start_time
@@ -188,9 +372,10 @@ if __name__ == '__main__':
     parser.add_argument('--use_sex', type=bool, default=True)
     parser.add_argument('--use_age', type=bool, default=True)
     parser.add_argument('--use_exposed_time', type=bool, default=True)
-    parser.add_argument('--use_read_history', type=bool, default=False)
+    parser.add_argument('--use_read_history', type=bool, default=True)
+    #parser.add_argument('--use_read_history', type=bool, default=False)
 
-    parser.add_argument('--num_epochs', type=int, default=1)
+    parser.add_argument('--num_epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--num_classes', type=int, default=1)
     parser.add_argument('--task', type=str, default='ctrpred')
