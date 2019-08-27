@@ -87,7 +87,9 @@ def _infer(root, phase, model, task):
 
             #logits = model(images, extracted_image_features, flat_features)
             logits = model(extracted_image_features, flat_features, sequence)
-            y_pred += logits.cpu().squeeze().numpy().tolist()
+            y_pred = logits.cpu().squeeze().detach().numpy()
+            y_pred = np.argmax(y_pred, axis=1)
+            y_pred += y_pred.tolist()
 
         print('end infer')
     return y_pred
@@ -116,9 +118,9 @@ def main(args):
         args.lr = 0.01
     elif args.arch == 'custom3':
         model = get_custom3(num_classes=args.num_classes)
-        args.batch_size = 64
-        args.lr = 0.01
+        args.lr = 0.001
     elif args.arch == 'history':
+        args.batch_size = 64
         model = get_history_model(num_classes=args.num_classes)
 
     if args.use_gpu:
@@ -186,7 +188,6 @@ def main(args):
                     weight = weight.cuda()
                     # loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
                     criterion = nn.CrossEntropyLoss(weight=weight)
-
                     loss = criterion(logits.squeeze(), labels.long().squeeze(-1))
 
                 # backward and optimize
