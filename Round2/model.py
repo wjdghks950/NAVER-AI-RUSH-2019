@@ -140,7 +140,7 @@ class custom_model2(nn.Module):
         return output
 
 class custom_model3(nn.Module):
-    def __init__(self, num_classes=1):
+    def __init__(self, num_classes=2):
         super(custom_model3, self).__init__()
         self.num_classes = num_classes
 
@@ -154,7 +154,7 @@ class custom_model3(nn.Module):
             nn.Linear(512, 256),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(256, 100),
+            nn.Linear(256, 128),
         )
 
         self.ff_net = nn.Sequential(
@@ -174,15 +174,16 @@ class custom_model3(nn.Module):
             nn.Linear(512, 256),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(256, 100),
+            nn.Linear(256, 128),
         )
 
-        self.classifier = nn.Linear(210, self.num_classes)
+        self.classifier = nn.Linear(266, self.num_classes)
 
     def forward(self, eif, ff, sequence):
-        # print('[eif]:', eif)
-        # print('[ff]:', ff)
-        # print('[history]:', sequence)
+        #add noise to extracted image feature
+        if self.training:
+            noise = eif.data.new(eif.size()).normal_(0, 0.01)
+            eif = eif + noise
         _eif=self.eif_net(eif)
         _ff=self.ff_net(ff)
         _history = self.history_net(sequence)
