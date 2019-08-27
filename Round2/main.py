@@ -8,7 +8,7 @@ import argparse
 import numpy as np
 import time
 import datetime
-from model import custom_model, custom_model2, custom_model3
+from model import custom_model, custom_model2, custom_model3, CTRHistoryModel
 
 from data_loader import feed_infer
 from evaluation import evaluation_metrics
@@ -44,6 +44,8 @@ def get_custom2(num_classes):
     return custom_model2(num_classes=num_classes)
 def get_custom3(num_classes):
     return custom_model3(num_classes=num_classes)
+def get_history_model(num_classes):
+    return CTRHistoryModel(max_len=512, num_classes=num_classes)
 
 def bind_nsml(model, optimizer, task):
     def save(dir_name, *args, **kwargs):
@@ -116,6 +118,8 @@ def main(args):
         model = get_custom3(num_classes=args.num_classes)
         args.batch_size = 2048
         args.lr = 0.01
+    elif args.arch == 'history':
+        model = get_history_model(num_classes=args.num_classes)
 
     if args.use_gpu:
         model = model.cuda()
@@ -174,6 +178,8 @@ def main(args):
                     logits = model(images, extracted_image_features, flat_features)
                 elif args.arch == 'custom3':
                     logits = model(extracted_image_features, flat_features, sequence)
+                elif args.arch == 'history':
+                    logist = model()
                 criterion = nn.MSELoss()
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
                     weight = torch.tensor([0.06382, 1.])
