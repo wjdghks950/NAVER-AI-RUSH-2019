@@ -57,6 +57,8 @@ class AIRUSH2dataset(Dataset):
             self.label = pd.read_csv(label_data_path,
                                      dtype={'label': int},
                                      sep='\t')
+            print(self.item)
+            print(self.label)
 
             if nsml.IS_ON_NSML:
                 with open(os.path.join(DATASET_PATH, 'train', 'train_data', 'train_image_features.pkl'),
