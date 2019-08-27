@@ -87,19 +87,13 @@ def _infer(root, phase, model, task):
 
             #logits = model(images, extracted_image_features, flat_features)
             logits = model(extracted_image_features, flat_features, sequence)
-            y_pred = logits.cpu().squeeze().detach().numpy()
-            y_pred = np.argmax(y_pred, axis=1)
-            y_pred = y_pred.astype(float)
-            y_pred += y_pred.tolist()
+            logits = logits.cpu().squeeze().detach().numpy()
+            logits = np.argmax(logits, axis=1)
+            logits = logits.astype(float)
+            y_pred += logits.tolist()
 
         print('end infer')
     return y_pred
-
-def weighted_BCE(output, target, weight):
-    assert len(weight) == 2
-    loss = weight[1] * (target * torch.log(output)) + \
-            weight[0] * ((1-target) * torch.log(1-output))
-    return torch.neg(torch.mean(loss))
 
 def evaluation(y_true, y_pred):
     y_pred[y_pred>0.5]=1
@@ -198,8 +192,8 @@ def main(args):
                 y_true = labels.cpu().squeeze().detach().numpy()
                 
                 y_pred = np.argmax(y_pred, axis=1)
+                y_pred = y_pred.astype(float)
                 y_true = y_true.astype(int)
-
                 score = evaluation(y_true, y_pred)
                 print('[ Training set [F1 score] ] : ', score)
                 print('[ Training Loss ] : ', loss.item())
