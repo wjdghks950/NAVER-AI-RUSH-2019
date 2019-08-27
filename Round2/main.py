@@ -184,7 +184,8 @@ def main(args):
                     logist = model()
                 criterion = nn.MSELoss()
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
-                    weight = torch.tensor([0.06382, 1.])
+                    #weight = torch.tensor([0.06382, 1.])
+                    weight = torch.tensor([0.06382, 2.])
                     weight = weight.cuda()
                     # loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
                     criterion = nn.CrossEntropyLoss(weight=weight)
