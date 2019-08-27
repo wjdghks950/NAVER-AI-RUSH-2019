@@ -202,10 +202,9 @@ def main(args):
                 score = evaluation(y_true, y_pred)
                 print('[ Training set [F1 score] ] : ', score)
                 print('[ Training Loss ] : ', loss.item())
-                if loss < best_loss:
+                if loss.item() < best_loss:
                     nsml.save('best_loss')  # this will save your best model on nsml.
-                    if i % 500 == 0:
-                        nsml.save(str(i)+'batch_best_loss')
+                    best_loss = loss.item()
 
                 if i % args.print_every == 0:
                     elapsed = datetime.datetime.now() - start_time
@@ -240,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--print_every', type=int, default=10)
     parser.add_argument('--save_epoch_every', type=int, default=2)
-    parser.add_argument('--save_step_every', type=int, default=1000)
+    parser.add_argument('--save_step_every', type=int, default=200)
 
     parser.add_argument('--use_gpu', type=bool, default=True)
     parser.add_argument("--arch", type=str, default="custom")
