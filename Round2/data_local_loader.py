@@ -12,7 +12,6 @@ import nsml
 
 from utils import get_transforms
 from utils import default_loader
-
 if not nsml.IS_ON_NSML:
     # if you want to run it on your local machine, then put your path here
     DATASET_PATH = '/temp'
@@ -94,17 +93,42 @@ class AIRUSH2dataset(Dataset):
         self.args = args
         self.root_dir = root_dir
         self.transform = transform
-
+        self.max_length = 0
         if self.args['use_sex']:
             self.sex = {'unknown': 0, 'm': 1, 'f': 2}
 
         if self.args['use_age']:
             self.age = {'unknown': 0, '-14': 1, '15-19': 2, '20-24': 3, '25-29': 4,
                         '30-34': 5, '35-39': 6, '40-44': 7, '45-49': 8, '50-': 9}
-
+        words = []
+        for idx, data in enumerate(self.item['read_article_ids']):
+            data = str(data)
+            datas = [x.strip() for x in data.split(',')]
+            if self.max_length < len(datas):
+                self.max_length = len(datas)
+            for d in datas:
+                words.append(d)
+        #print(len(words))
+        #print(words[0])
+        PAD_token = 0
+        SOS_token = 1
+        EOS_token = 2
+        self.word2idx = {}
+        self.word2count = {}
+        self.idx2word = {PAD_token: "PAD", SOS_token: "SOS", EOS_token: "EOS"}
+        self.num_words = 3
+        for word in words:
+            if word not in self.word2idx:
+                self.word2idx[word] = self.num_words
+                self.word2count[word] = 1
+                self.idx2word[self.num_words] = word
+                self.num_words += 1
+            else:
+                self.word2count[word] = 1
     def __len__(self):
         return len(self.item)
-
+    def get_max_length(self):
+        return self.max_length
     def __getitem__(self, idx):
         article_id, hh, gender, age_range, read_article_ids = \
             self.item.loc[idx, ['article_id', 'hh', 'gender', 'age_range', 'read_article_ids']]
@@ -154,8 +178,20 @@ class AIRUSH2dataset(Dataset):
             label_onehot[time - 1] = 1
             flat_features.extend(label_onehot)
 
-        if self.args['use_read_history']: #TODO: This helps A LOT
-            raise NotImplementedError('If you can handle "sequential" data, then.. hint: this helps a lot')
+        if self.args['use_read_history']:
+            history = str(read_article_ids)
+            #max length of train set is 2427, test set is 947...
+            sequence = np.zeros((2427), dtype=np.float32)
+            mask = np.zeros((2427), dtype=np.uint8)
+            result = [x.strip() for x in history.split(',')]
+            for i, data in enumerate(result):
+                sequence[i] = self.word2idx[data]
+            for j in range(0, len(result)):
+                mask[j] = 1
+            #print(history)
+            #print(sequence)
+            #print(mask)
+            #raise NotImplementedError('If you can handle "sequential" data, then.. hint: this helps a lot')
 
         flat_features = np.array(flat_features).flatten()
         # pytorch dataloader doesn't accept empty np array
@@ -165,7 +201,7 @@ class AIRUSH2dataset(Dataset):
 
         # hint: flat features are concatened into a Tensor, because I wanted to put them all into computational model,
         # hint: if it is not what you wanted, then change the last return line
-        return image, extracted_image_feature, label, flat_features
+        return image, extracted_image_feature, label, flat_features, sequence, mask
 
 
 def my_collate(batch):
@@ -181,7 +217,7 @@ def get_data_loader(root, phase, batch_size=16, verbose=True):
     if phase == 'train':
         print('[debug] data local loader ', phase)
         built_in_args = {'mode': 'train', 'use_sex': True, 'use_age': True, 'use_exposed_time': True,
-                         'use_read_history': False,
+                         'use_read_history': True, #False
                          'num_workers': 2, }
 
         image_datasets = AIRUSH2dataset(
@@ -192,6 +228,7 @@ def get_data_loader(root, phase, batch_size=16, verbose=True):
             mode='train'
         )
         dataset_sizes = len(image_datasets)
+        max_length = image_datasets.get_max_length()
 
         dataloaders = torch.utils.data.DataLoader(image_datasets,
                                                   batch_size=batch_size,
@@ -204,7 +241,7 @@ def get_data_loader(root, phase, batch_size=16, verbose=True):
         print('[debug] data local loader ', phase)
 
         built_in_args = {'mode': 'test', 'use_sex': True, 'use_age': True, 'use_exposed_time': True,
-                         'use_read_history': False,
+                         'use_read_history': True, #False,
                          'num_workers': 3, }
 
         image_datasets = AIRUSH2dataset(
