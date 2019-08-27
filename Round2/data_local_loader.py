@@ -183,12 +183,20 @@ class AIRUSH2dataset(Dataset):
         if self.args['use_read_history']:
             history = str(read_article_ids)
             #max length of train set is 2427, test set is 947...
-            sequence = np.zeros((2427), dtype=np.float32)
-            mask = np.zeros((2427), dtype=np.uint8)
+            max_length = 512
+            sequence = np.zeros((max_length), dtype=np.float32) # Max length of history = 2427
+            mask = np.zeros((max_length), dtype=np.uint8)
             result = [x.strip() for x in history.split(',')]
-            for i, data in enumerate(result):
-                sequence[i] = self.word2idx[data]
-            for j in range(0, len(result)):
+
+            # Slice the history (of max_length=2427 to max_length=512)) 
+            if len(result) >= max_length:
+                for i, data in enumerate(result[:max_length]):
+                    sequence[i] = self.word2idx[data]
+            else: # len(result) < max_legnth
+                for i, data in enumerate(result):
+                    sequence[i] = self.word2idx[data]
+
+            for j in range(0, len(result[:max_length])):
                 mask[j] = 1
             #print(history)
             #print(sequence)
