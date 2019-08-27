@@ -44,6 +44,8 @@ def evaluation_metrics(prediction_file, groundtruth_file):
         y_true.append(line)
 
     y_true = np.array(y_true)
+    print(y_pred)
+    print(y_true)
 
     return evaluate(y_true, y_pred)
 
