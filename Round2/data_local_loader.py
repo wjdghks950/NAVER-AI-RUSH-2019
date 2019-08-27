@@ -56,8 +56,8 @@ class AIRUSH2dataset(Dataset):
             self.label = pd.read_csv(label_data_path,
                                      dtype={'label': int},
                                      sep='\t')
-            print(self.item)
-            print(self.label)
+            # print(self.item)
+            # print(self.label)
 
             if nsml.IS_ON_NSML:
                 with open(os.path.join(DATASET_PATH, 'train', 'train_data', 'train_image_features.pkl'),
@@ -183,7 +183,7 @@ class AIRUSH2dataset(Dataset):
         if self.args['use_read_history']:
             history = str(read_article_ids)
             #max length of train set is 2427, test set is 947...
-            max_length = 512
+            max_length = 2427
             sequence = np.zeros((max_length), dtype=np.float32) # Max length of history = 2427
             mask = np.zeros((max_length), dtype=np.uint8)
             result = [x.strip() for x in history.split(',')]
