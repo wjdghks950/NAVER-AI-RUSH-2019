@@ -149,7 +149,7 @@ def main(args):
         else:
             print('start training...!')
             nsml.save('init')
-
+        total_loss = 0
         for epoch in range(args.num_epochs):
             for i, data in enumerate(train_loader):
                 images, extracted_image_features, labels, flat_features, sequence = data
@@ -203,14 +203,16 @@ def main(args):
                 score = evaluation(y_true, y_pred)
                 print('[ Training set [F1 score] ] : ', score)
                 print('[ Training Loss ] : ', loss.item())
-                if loss.item() < best_loss:
-                    nsml.save('best_loss')  # this will save your best model on nsml.
-                    best_loss = loss.item()
-
-                if i % args.print_every == 0:
+                total_loss +=loss.item()
+                if i % args.print_every == 0 and i > 9:
+                    total_loss = total_loss / args.print_every
+                    if total_loss < best_loss:
+                        best_loss = total_loss
+                        nsml.save('best_loss')
                     elapsed = datetime.datetime.now() - start_time
                     print('Elapsed [%s], Epoch [%i/%i], Step [%i/%i], Loss: %.4f'
-                          % (elapsed, epoch + 1, args.num_epochs, i + 1, iter_per_epoch, loss.item()))
+                          % (elapsed, epoch + 1, args.num_epochs, i + 1, iter_per_epoch, total_loss))
+                    total_loss = 0
                 if i % args.save_step_every == 0:
                     # print('debug ] save testing purpose')
                     nsml.save('step_' + str(i))  # this will save your current model on nsml.
@@ -234,7 +236,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_read_history', type=bool, default=True)
 
     parser.add_argument('--num_epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--num_classes', type=int, default=2)
     parser.add_argument('--task', type=str, default='ctrpred')
     parser.add_argument('--lr', type=float, default=1e-3)
