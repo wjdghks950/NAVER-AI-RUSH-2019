@@ -17,6 +17,7 @@ def evaluate(y_true, y_pred):
     Returns:
       score (numpy float): Mean Squared Error.
     """
+    print('y_pred: ', y_pred)
     y_pred[y_pred > 0.5] = 1
     y_pred[y_pred <= 0.5] = 0
     score = f1_score(y_true=y_true, y_pred=y_pred, pos_label=1)
