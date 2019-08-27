@@ -78,7 +78,7 @@ def _infer(root, phase, model, task):
         y_pred = []
         print('start infer')
         for i, data in enumerate(test_loader):
-            images, extracted_image_features, labels, flat_features, sequence, mask = data
+            images, extracted_image_features, labels, flat_features, sequence = data
             sequence = sequence.cuda()
             #images = images.cuda()
             extracted_image_features = extracted_image_features.cuda()
@@ -89,6 +89,7 @@ def _infer(root, phase, model, task):
             logits = model(extracted_image_features, flat_features, sequence)
             y_pred = logits.cpu().squeeze().detach().numpy()
             y_pred = np.argmax(y_pred, axis=1)
+            y_pred = y_pred.astype(float)
             y_pred += y_pred.tolist()
 
         print('end infer')
@@ -107,6 +108,7 @@ def evaluation(y_true, y_pred):
     return score.item()
 
 def main(args):
+    print(args)
     if args.arch == 'MLP':
         model = get_mlp(num_classes=args.num_classes)
     elif args.arch == 'custom':
@@ -115,12 +117,9 @@ def main(args):
         model = get_custom2(num_classes=args.num_classes)
         #maximum batch_size
         args.batch_size = 64
-        args.lr = 0.01
     elif args.arch == 'custom3':
         model = get_custom3(num_classes=args.num_classes)
-        args.lr = 0.001
     elif args.arch == 'history':
-        args.batch_size = 64
         model = get_history_model(num_classes=args.num_classes)
 
     if args.use_gpu:
@@ -153,7 +152,7 @@ def main(args):
 
         for epoch in range(args.num_epochs):
             for i, data in enumerate(train_loader):
-                images, extracted_image_features, labels, flat_features, sequence, mask = data
+                images, extracted_image_features, labels, flat_features, sequence = data
                 #print(images.size())
                 #B x [3 x 456 x 232] image
                 #print(extracted_image_features.size())
@@ -186,7 +185,6 @@ def main(args):
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
                     weight = torch.tensor([0.06382, 1.])
                     weight = weight.cuda()
-                    # loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
                     criterion = nn.CrossEntropyLoss(weight=weight)
                     loss = criterion(logits.squeeze(), labels.long().squeeze(-1))
 
@@ -203,6 +201,7 @@ def main(args):
 
                 score = evaluation(y_true, y_pred)
                 print('[ Training set [F1 score] ] : ', score)
+                print('[ Training Loss ] : ', loss.item())
                 if loss < best_loss:
                     nsml.save('best_loss')  # this will save your best model on nsml.
                     if i % 500 == 0:
@@ -233,11 +232,10 @@ if __name__ == '__main__':
     parser.add_argument('--use_age', type=bool, default=True)
     parser.add_argument('--use_exposed_time', type=bool, default=True)
     parser.add_argument('--use_read_history', type=bool, default=True)
-    #parser.add_argument('--use_read_history', type=bool, default=False)
 
     parser.add_argument('--num_epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--num_classes', type=int, default=1)
+    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--num_classes', type=int, default=2)
     parser.add_argument('--task', type=str, default='ctrpred')
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--print_every', type=int, default=10)

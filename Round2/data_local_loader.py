@@ -185,9 +185,7 @@ class AIRUSH2dataset(Dataset):
             #max length of train set is 2427, test set is 947...
             max_length = 2427
             sequence = np.zeros((max_length), dtype=np.float32) # Max length of history = 2427
-            mask = np.zeros((max_length), dtype=np.uint8)
             result = [x.strip() for x in history.split(',')]
-
             # Slice the history (of max_length=2427 to max_length=512)) 
             if len(result) >= max_length:
                 for i, data in enumerate(result[:max_length]):
@@ -195,13 +193,6 @@ class AIRUSH2dataset(Dataset):
             else: # len(result) < max_legnth
                 for i, data in enumerate(result):
                     sequence[i] = self.word2idx[data]
-
-            for j in range(0, len(result[:max_length])):
-                mask[j] = 1
-            #print(history)
-            #print(sequence)
-            #print(mask)
-            #raise NotImplementedError('If you can handle "sequential" data, then.. hint: this helps a lot')
 
         flat_features = np.array(flat_features).flatten()
         # pytorch dataloader doesn't accept empty np array
@@ -211,7 +202,7 @@ class AIRUSH2dataset(Dataset):
 
         # hint: flat features are concatened into a Tensor, because I wanted to put them all into computational model,
         # hint: if it is not what you wanted, then change the last return line
-        return image, extracted_image_feature, label, flat_features, sequence, mask
+        return image, extracted_image_feature, label, flat_features, sequence
 
 
 def my_collate(batch):
