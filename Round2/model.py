@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 class CTRHistoryModel(nn.Module):
-    def __init__(self, max_len, num_classes=1, hidden_size=128, batch_size=32, num_layers=2):
+    def __init__(self, max_len, num_classes=1, hidden_size=1024, batch_size=32, num_layers=2):
         super(CTRHistoryModel, self).__init__()
         self.num_classes = num_classes
         self.max_len = max_len
