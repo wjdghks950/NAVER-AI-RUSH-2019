@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 class CTRHistoryModel(nn.Module):
-    def __init__(self, max_len, num_classes=1, hidden_size=2048, batch_size=32, num_layers=2):
+    def __init__(self, max_len, num_classes=1, hidden_size=128, batch_size=32, num_layers=2):
         super(CTRHistoryModel, self).__init__()
         self.num_classes = num_classes
         self.max_len = max_len
@@ -44,7 +44,7 @@ class CTRHistoryModel(nn.Module):
 
         output_size = 100 + 10 + self.linear_out
 
-        self.classifier = nn.Linear(output_size, 1) # output_size = _img + _eif + _ff + _hist_out (size of all these concatenated)
+        self.classifier = nn.Linear(output_size, self.num_classes) # output_size = _img + _eif + _ff + _hist_out (size of all these concatenated)
 
     def init_hidden(self):
         # Initialize hidden and cell
@@ -88,7 +88,7 @@ class custom_model(nn.Module):
             nn.Linear(60, 10),
         )
 
-        self.classifier = nn.Linear(110, 1)
+        self.classifier = nn.Linear(110, self.num_classes)
 
     def forward(self, eif, ff):
         _eif=self.eif_net(eif)
@@ -126,7 +126,7 @@ class custom_model2(nn.Module):
             nn.Linear(60, 10),
         )
 
-        self.classifier = nn.Linear(356, 1)
+        self.classifier = nn.Linear(356, self.num_classes)
 
     def forward(self, image, eif, ff):
         _img=self.image_net(image).squeeze(-1).squeeze(-1)
@@ -177,7 +177,7 @@ class custom_model3(nn.Module):
             nn.Linear(256, 100),
         )
 
-        self.classifier = nn.Linear(210, 1)
+        self.classifier = nn.Linear(210, self.num_classes)
 
     def forward(self, eif, ff, sequence):
         _eif=self.eif_net(eif)
