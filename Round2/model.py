@@ -1,14 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 
 class CTRHistoryModel(nn.Module):
     def __init__(self, max_len, num_classes=1, hidden_size=2048, batch_size=32, num_layers=2):
+        super(CTRHistoryModel, self).__init__()
         self.num_classes = num_classes
         self.max_len = max_len
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.batch_size = batch_size
+        self.linear_out = 128
 
         image_model = models.resnet101(pretrained=True)
         image_model = list(image_model.children())[:-1]
@@ -17,6 +20,7 @@ class CTRHistoryModel(nn.Module):
         
         # Sequence data - history
         self.seq_net = nn.LSTM(input_size=self.max_len, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True)
+        self.linear = nn.Linear(self.hidden_size, self.linear_out)
 
         self.eif_net = nn.Sequential(
             nn.Linear(2048, 4096),
@@ -38,15 +42,23 @@ class CTRHistoryModel(nn.Module):
             nn.Linear(60, 10),
         )
 
-        self.classifier = nn.Linear(output_size, 1) # TODO: output_size = _img + _eif + _ff + _hist_out (size of all these concatenated)
+        output_size = 100 + 10 + self.linear_out
 
-        # TODO: initialize method - which one?
+        self.classifier = nn.Linear(output_size, 1) # output_size = _img + _eif + _ff + _hist_out (size of all these concatenated)
+
+    def init_hidden(self):
+        # Initialize hidden and cell
+        h0 = torch.zeros(num_layers, self.batch_size, self.hidden_size)
+        c0 = torch.zeros(num_layers, self.batch_size, self.hidden_size)
+
+        return (h0, c0) # returns a tuple of hidden and cell_state
 
     def forward(self, image, eif, ff, history, hn, cn):
         _img = self.image_net(image).squeeze(-1).squeeze(-1)
         _eif = self.eif_net(eif)
         _ff = self.ff_net(ff)
-        _hist_out, (hn, cn) = self.seq_net(history, (hn, cn))
+        _hist_out, self.hidden = self.seq_net(history.view(len(history)), self.batch_size, -1)
+        _hist_out = self.linear(_hist_out[0])
         _features = torch.cat((_eif, _ff), 1)
         _features = torch.cat((_hist_out, _features), 1)
         output = torch.sigmoid(self.classifier(_features))
