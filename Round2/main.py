@@ -116,7 +116,7 @@ def main(args):
         args.lr = 0.01
     elif args.arch == 'custom3':
         model = get_custom3(num_classes=args.num_classes)
-        args.batch_size = 2048
+        args.batch_size = 64
         args.lr = 0.01
     elif args.arch == 'history':
         model = get_history_model(num_classes=args.num_classes)
@@ -184,7 +184,10 @@ def main(args):
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
                     weight = torch.tensor([0.06382, 1.])
                     weight = weight.cuda()
-                    loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
+                    # loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
+                    criterion = nn.CrossEntropyLoss(weight=weight)
+
+                    loss = criterion(logits.squeeze(), labels.long().squeeze(-1))
 
                 # backward and optimize
                 optimizer.zero_grad()
@@ -193,8 +196,12 @@ def main(args):
 
                 y_pred = logits.cpu().squeeze().detach().numpy()
                 y_true = labels.cpu().squeeze().detach().numpy()
+                
+                y_pred = np.argmax(y_pred, axis=1)
+                y_true = y_true.astype(int)
+
                 score = evaluation(y_true, y_pred)
-                print('train set f1 score is : ', score)
+                print('[ Training set [F1 score] ] : ', score)
                 if loss < best_loss:
                     nsml.save('best_loss')  # this will save your best model on nsml.
                     if i % 500 == 0:
@@ -228,7 +235,7 @@ if __name__ == '__main__':
     #parser.add_argument('--use_read_history', type=bool, default=False)
 
     parser.add_argument('--num_epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=2048)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--num_classes', type=int, default=1)
     parser.add_argument('--task', type=str, default='ctrpred')
     parser.add_argument('--lr', type=float, default=1e-3)
