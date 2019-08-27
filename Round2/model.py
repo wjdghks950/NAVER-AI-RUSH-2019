@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class CTRHistoryModel(nn.Module):
-    def __init__(self, num_classes=1, max_len, hidden_size=2048, batch_size=32, num_layers=2):
+    def __init__(self, max_len, num_classes=1, hidden_size=2048, batch_size=32, num_layers=2):
         self.num_classes = num_classes
         self.max_len = max_len
         self.hidden_size = hidden_size
@@ -38,6 +38,8 @@ class CTRHistoryModel(nn.Module):
         )
 
         self.classifier = nn.Linear(output_size, 1) # TODO: output_size = _img + _eif + _ff + _hist_out (size of all these concatenated)
+
+        # TODO: initialize method - which one?
 
     def forward(self, image, eif, ff, history, hn, cn):
         _img = self.image_net(image).squeeze(-1).squeeze(-1)
