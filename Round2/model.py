@@ -180,9 +180,9 @@ class custom_model3(nn.Module):
         self.classifier = nn.Linear(210, self.num_classes)
 
     def forward(self, eif, ff, sequence):
-        print('[eif]:', eif)
-        print('[ff]:', ff)
-        print('[history]:', sequence)
+        # print('[eif]:', eif)
+        # print('[ff]:', ff)
+        # print('[history]:', sequence)
         _eif=self.eif_net(eif)
         _ff=self.ff_net(ff)
         _history = self.history_net(sequence)
