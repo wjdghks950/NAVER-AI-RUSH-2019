@@ -91,9 +91,7 @@ def _infer(root, phase, model, task):
             logits = np.argmax(logits, axis=1)
             logits = logits.astype(float)
             y_pred += logits.tolist()
-            print(y_pred)
 
-        print(y_pred)
         print('end infer')
     return y_pred
 
