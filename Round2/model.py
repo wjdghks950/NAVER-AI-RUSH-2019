@@ -165,10 +165,13 @@ class custom_model3(nn.Module):
         )
 
         self.history_net = nn.Sequential(
-            nn.Linear(2427, 2048),
+            nn.Linear(512, 512),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(2048, 512),
+            nn.Linear(512, 1024),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(1024, 512),
             nn.ReLU(True),
             nn.Dropout(),
             nn.Linear(512, 256),
