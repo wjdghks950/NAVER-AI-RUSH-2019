@@ -151,7 +151,7 @@ class custom_model3(nn.Module):
             nn.Linear(256, 100),
         )
 
-        self.classifier = nn.Linear(210, 2)
+        self.classifier = nn.Linear(210, 1)
 
     def forward(self, eif, ff, sequence):
         _eif=self.eif_net(eif)
@@ -160,8 +160,7 @@ class custom_model3(nn.Module):
         _features = torch.cat((_eif, _ff), 1)
         all_features = torch.cat((_features, _history),1)
         output = self.classifier(all_features)
-        return F.log_softmax(output, dim=1)
-        #return output
+        return output
 
 # example model and code
 class MLP_only_flatfeatures(nn.Module):
@@ -246,6 +245,11 @@ def _infer(root, phase, model, task):
         print('end infer')
     return y_pred
 
+def weighted_BCE(output, target, weight):
+    assert len(weight) == 2
+    loss = weight[1] * (target * torch.log(output)) + \
+            weight[0] * ((1-target) * torch.log(1-output))
+    return torch.neg(torch.mean(loss))
 def evaluation(y_true, y_pred):
     y_pred[y_pred>0.5]=1
     y_pred[y_pred<=0.5]=0
@@ -328,10 +332,7 @@ def main(args):
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
                     weight = torch.tensor([0.06382, 1.])
                     weight = weight.cuda()
-                    criterion = nn.NLLLoss(weight=weight)
-                loss = criterion(logits, labels.long())
-                pred = logits.argmax(dim=1, keepdim=True)
-                print(pred)
+                    loss = weighted_BCE(logits.squeeze(), labels.float(), weight)
 
                 # backward and optimize
                 optimizer.zero_grad()
@@ -344,6 +345,8 @@ def main(args):
                 print('train set f1 score is : ', score)
                 if loss < best_loss:
                     nsml.save('best_loss')  # this will save your best model on nsml.
+                    if i % 500 == 0:
+                        nsml.save(str(i)+'batch_best_loss')
 
                 if i % args.print_every == 0:
                     elapsed = datetime.datetime.now() - start_time
