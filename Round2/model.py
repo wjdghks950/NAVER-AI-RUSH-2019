@@ -154,7 +154,7 @@ class custom_model3(nn.Module):
             nn.Linear(512, 256),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(256, 128),
+            nn.Linear(256, 256),
         )
 
         self.ff_net = nn.Sequential(
@@ -165,9 +165,6 @@ class custom_model3(nn.Module):
         )
 
         self.history_net = nn.Sequential(
-            nn.Linear(512, 512),
-            nn.ReLU(True),
-            nn.Dropout(),
             nn.Linear(512, 1024),
             nn.ReLU(True),
             nn.Dropout(),
@@ -177,10 +174,15 @@ class custom_model3(nn.Module):
             nn.Linear(512, 256),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(256, 128),
+            nn.Linear(256, 256),
         )
 
-        self.classifier = nn.Linear(266, self.num_classes)
+        self.classifier = nn.Sequential(
+            nn.Linear(522, 256),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(256, self.num_classes),
+        )
 
     def forward(self, eif, ff, sequence):
         #add noise to extracted image feature
