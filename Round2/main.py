@@ -177,8 +177,8 @@ def main(args):
                     logist = model()
                 criterion = nn.MSELoss()
                 if args.arch == 'custom2' or args.arch == 'custom' or args.arch == 'custom3':
-                    #weight = torch.tensor([0.06382, 1.])
-                    weight = torch.tensor([0.06382, 2.])
+                    weight = torch.tensor([0.06382, 1.])
+                    #weight = torch.tensor([0.06382, 2.])
                     weight = weight.cuda()
                     criterion = nn.CrossEntropyLoss(weight=weight)
                     loss = criterion(logits.squeeze(), labels.long().squeeze(-1))
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_read_history', type=bool, default=True)
 
     parser.add_argument('--num_epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=2048)
+    parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument('--num_classes', type=int, default=2)
     parser.add_argument('--task', type=str, default='ctrpred')
     parser.add_argument('--lr', type=float, default=1e-3)
