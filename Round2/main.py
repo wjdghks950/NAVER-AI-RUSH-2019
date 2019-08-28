@@ -229,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_read_history', type=bool, default=True)
 
     parser.add_argument('--num_epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=1024)
+    parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--num_classes', type=int, default=2)
     parser.add_argument('--task', type=str, default='ctrpred')
     parser.add_argument('--lr', type=float, default=1e-3)
